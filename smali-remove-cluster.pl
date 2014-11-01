@@ -4,5 +4,7 @@ use FindBin;
 use lib $FindBin::Bin;
 use Smali;
 
-my $root_package = shift @ARGV or die "Need root package name";
-Smali::remove_cluster($root_package);
+while(<>){
+	chomp;
+	Smali::remove_one_smali($_);
+}
