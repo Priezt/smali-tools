@@ -2,6 +2,7 @@ package Smali;
 
 use Cwd;
 use Data::Dumper;
+use File::Slurp;
 
 our $SMALI_DUMP_FILENAME = "smali-map.txt";
 our $cluster = {};
@@ -17,7 +18,11 @@ sub get_cluster{
 
 sub load_map_cache{
 	unless($map_cache){
-		open DUMPFILE,"<",get_smali_dir()."/../".$SMALI_DUMP_FILENAME;
+		my $dump_filename = get_smali_dir()."/../".$SMALI_DUMP_FILENAME;
+		unless(-e $dump_filename){
+			cache_smali_map();
+		}
+		open DUMPFILE,"<",$dump_filename;
 		my $content = join "", <DUMPFILE>;
 		close DUMPFILE;
 		my $VAR1;
@@ -178,6 +183,39 @@ sub remove_one_smali{
 	#print("mv $path $backup_path\n");
 	system("mv $path $backup_path");
 	clear_empty_dir($path);
+}
+
+sub copy_smali{
+	my $old_package_name = format_package_name(shift);
+	my $new_package_name = format_package_name(shift);
+	my $old_path = get_path_by_package($old_package_name);
+	my $new_path = get_path_by_package($new_package_name);
+	make_dir($new_path);
+	system("cp $old_path $new_path");
+}
+
+sub rename_smali{
+	my $old_package_name = format_package_name(shift);
+	my $target_prefix = shift;
+	my $target_dir = get_smali_dir()."/".$target_prefix."/";
+	my $new_surfix = $old_package_name;
+	$new_surfix =~s /\//_/g;
+	my $new_package_name = $target_prefix."/".$new_surfix;
+	copy_smali($old_package_name, $new_package_name);
+	remove_one_smali($old_package_name);
+	for my $package_to_be_modified (get_all_packages()){
+		replace_one_file($old_package_name, $new_package_name, $package_to_be_modified);
+	}
+}
+
+sub replace_one_file{
+	my $old_package_name = format_package_name(shift);
+	my $new_package_name = format_package_name(shift);
+	my $target_smali_package = format_package_name(shift);
+	my $filename = get_path_by_package($target_smali_package);
+	my $content = read_file($filename);
+	$content =~s /L$old_package_name;/L$new_package_name;/g;
+	write_file($filename, $content);
 }
 
 1;
