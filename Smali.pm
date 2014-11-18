@@ -181,7 +181,7 @@ sub remove_one_smali{
 	my $backup_path = get_backup_path_by_package($package_name);
 	make_dir($backup_path);
 	#print("mv $path $backup_path\n");
-	system("mv $path $backup_path");
+	system("mv '$path' '$backup_path'");
 	clear_empty_dir($path);
 }
 
@@ -191,7 +191,24 @@ sub copy_smali{
 	my $old_path = get_path_by_package($old_package_name);
 	my $new_path = get_path_by_package($new_package_name);
 	make_dir($new_path);
-	system("cp $old_path $new_path");
+	system("cp '$old_path' '$new_path'");
+}
+
+sub change_prefix{
+	my $old_prefix = shift;
+	my $new_prefix = shift;
+	for my $package_to_be_modified (get_all_packages()){
+		my $old_name = $package_to_be_modified;
+		next unless $old_name =~ /^$old_prefix/;
+		my $new_name = $old_name;
+		$new_name =~s /^$old_prefix/$new_prefix/;
+		print $old_name." -> ".$new_name."\n";
+		copy_smali($old_name, $new_name);
+		remove_one_smali($old_name);
+	}
+	for my $package_to_be_modified (get_all_packages()){
+		change_prefix_for_one_file($old_prefix, $new_prefix, $package_to_be_modified);
+	}
 }
 
 sub rename_smali{
@@ -206,6 +223,16 @@ sub rename_smali{
 	for my $package_to_be_modified (get_all_packages()){
 		replace_one_file($old_package_name, $new_package_name, $package_to_be_modified);
 	}
+}
+
+sub change_prefix_for_one_file{
+	my $old_prefix = shift;
+	my $new_prefix = shift;
+	my $target_smali_package = format_package_name(shift);
+	my $filename = get_path_by_package($target_smali_package);
+	my $content = read_file($filename);
+	$content =~s /L$old_prefix/L$new_prefix/g;
+	write_file($filename, $content);
 }
 
 sub replace_one_file{
