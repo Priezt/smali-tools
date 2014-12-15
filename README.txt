@@ -17,3 +17,6 @@ smali-change-prefix.pl com/ms/ezqx me/priezt/warrior
 
 # change class name
 smali-class-rename.pl com/a/a/a/a z/q/TestClass
+
+# change method name
+smali-method-rename.pl z/q/TestClass1.smali 'a(Landroid/content/Context;)Ljava/lang/String;' testMethod
