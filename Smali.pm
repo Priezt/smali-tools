@@ -5,6 +5,7 @@ use Data::Dumper;
 use File::Slurp;
 
 our $SMALI_DUMP_FILENAME = "smali-map.txt";
+our $SMALI_LOG_FILENAME = "smali_log.txt";
 our $cluster = {};
 our $map_cache = 0;
 
@@ -243,6 +244,70 @@ sub replace_one_file{
 	my $content = read_file($filename);
 	$content =~s /L$old_package_name;/L$new_package_name;/g;
 	write_file($filename, $content);
+}
+
+sub smali_class{
+	my $package_name = format_package_name(shift);
+	my $filename = get_path_by_package($package_name);
+	my $sf= {
+		package_name => $package_name,
+		filename => $filename,
+	};
+	open SMALI_FILE,"<",$filename;
+	while(<SMALI_FILE>){
+		chomp;
+		if(/^\.super\s+L(.+);/){
+			$sf->{super} = $1;
+		}elsif(/^\.implements\s+L(.+);/){
+			$sf->{implements} = [] unless $sf->{implements};
+			push @{$sf->{implements}}, $1;
+		}elsif(/^\.field\s+.*\b(\w+)\:(.+)/){
+			$sf->{fields} = {} unless $sf->{fields};
+			$sf->{fields}->{$1} = $2;
+		}elsif(/^\.method\s+[^\(]*\s+(\S+\(\S+)/){
+			$sf->{methods} = [] unless $sf->{methods};
+			push @{$sf->{methods}}, $1;
+		}
+	}
+	close SMALI_FILE;
+	return $sf;
+}
+
+sub log{
+	my $msg = shift;
+	my $log_file = get_smali_dir()."/".$SMALI_LOG_FILENAME;
+	append_file($log_file, $msg."\n");
+}
+
+sub rename_class{
+	my $old_class = format_package_name(shift);
+	my $new_class = format_package_name(shift);
+	copy_smali($old_class, $new_class);
+	remove_one_smali($old_class);
+	for my $package_to_be_modified (get_all_packages()){
+		replace_one_file($old_class, $new_class, $package_to_be_modified);
+	}
+}
+
+sub rename_method{
+	my $class = format_package_name(shift);
+	my $method = shift;
+	my $new_name = shift;
+	$method =~ /^([^\(]+)(\(.+)$/;
+	my $old_name = $1;
+	my $signature_part = $2;
+	my $new_method = $new_name.$signature_part;
+	my $fn = get_path_by_package($class);
+	my $content = read_file($fn);
+	$content =~s /(\.method\s+[^\r\n]*\s+)\Q$method\E($|[\r\n\s])/$1.$new_method.$2/eg;
+	write_file($fn, $content);
+	for my $package_to_be_modified (get_all_packages()){
+		my $target_package_name = format_package_name($package_to_be_modified);
+		my $target_filename = get_path_by_package($target_package_name);
+		my $content = read_file($target_filename);
+		$content =~s /(L\Q$class\E;->)\Q$method\E($|[\r\n\s])/$1.$new_method.$2/ge;
+		write_file($target_filename, $content);
+	}
 }
 
 1;

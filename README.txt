@@ -15,3 +15,5 @@ smali-dir-cluster.pl com/sysk/firstpay | grep -v firstpay | xargs -I , smali-ren
 # change package prefix
 smali-change-prefix.pl com/ms/ezqx me/priezt/warrior
 
+# change class name
+smali-class-rename.pl com/a/a/a/a z/q/TestClass
