@@ -5,7 +5,7 @@ use Data::Dumper;
 use File::Slurp;
 
 our $SMALI_DUMP_FILENAME = "smali-map.txt";
-our $SMALI_LOG_FILENAME = "smali_log.txt";
+our $SMALI_LOG_FILENAME = "smali-log.txt";
 our $cluster = {};
 our $map_cache = 0;
 
@@ -282,6 +282,7 @@ sub log{
 sub rename_class{
 	my $old_class = format_package_name(shift);
 	my $new_class = format_package_name(shift);
+	Smali::log("rename class: $old_class ==> $new_class");
 	copy_smali($old_class, $new_class);
 	remove_one_smali($old_class);
 	for my $package_to_be_modified (get_all_packages()){
@@ -293,6 +294,7 @@ sub rename_method{
 	my $class = format_package_name(shift);
 	my $method = shift;
 	my $new_name = shift;
+	Smali::log("rename method: L$class;->$method ==> $new_name");
 	$method =~ /^([^\(]+)(\(.+)$/;
 	my $old_name = $1;
 	my $signature_part = $2;
